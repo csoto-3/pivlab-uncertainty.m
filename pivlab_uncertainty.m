@@ -6,39 +6,9 @@
 % Department of Mechanical and Aerospace Engineering
 % University of Central Florida, Orlando, FL, USA
 % Author: Carlos Soto
-% Edited: 2026-09-07
+% Edited: 2026-09-10
 % ------------------------------------------------------------------------------
-% MATLAB Requirements
-% - Image Processing Toolbox.
-% - PIVlab Add-On.
-% - Parallel Processing Toolbox (optional but recommended).
-% - Versions Tested: MATLAB 2025b with PIVlab 3.14.
-% Required Files
-% - Raw image file sequence (`.tif`).
-% - Exported velocity field file sequence (`.txt`).
-% - Exported PIVlab settings file (`.mat`).
-%   - Alternatively, provide values manually in the script.
-% Optional but Recommended Files
-% - Exported PIVlab mask file (`.mat`). If masks are not available, the
-%   following must be commented out from the script:
-%   - In the "USER CONFIGURATION" section:
-%     - The `file_msk` definition that specifies the mask file.
-%   - In the "IMPORT SETTINGS AND MASKS" section:
-%     - The `data_msk` definition that loads the masks.
-%     - The `masks_all` definition that parses the masks.
-%   - In the "UNCERTAINTY COMPUTATION" section:
-%     - The masking code block in Step 4 of the `nr = 1:Nr` loop.
-% - `ProgressBar.m`. This file defines the ProgressBar function used to track
-%   the the timestep loop and should be placed in the same directory as this
-%   script. It works for both single-threaded and multi-threaded execution.
-%   If it is missing, the following must be commented out of the "UNCERTAINTY
-%   COMPUTATION" section of the script:
-%   - The `prog` definition immediately before the `nt = 1:Nt` loop.
-%   - The `count(prog)` definition inside the `nt = 1:Nt` loop (final step
-%     inside the loop).
-% ------------------------------------------------------------------------------
-% Note: File and directory paths should be configured to reflect the user's
-% naming conventions and operating system.
+% See README for documentation.
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Make sure PIVlab's directory structure is added to the MATLAB path.
@@ -49,8 +19,6 @@
 addpath(genpath('/home/cesoto/MATLAB Add-Ons/Toolboxes/PIVlab'))
 
 % Start a parallel pool for multi-threaded execution.
-% If this is disabled, the timestep loop syntax in "UNCERTAINTY COMPUTATION"
-% must be changed from `parfor = 1:Nt` to `for 1 = 1:Nt`.
 current_pool = gcp('nocreate');
 if isempty(current_pool)
   parpool('Processes')
@@ -61,22 +29,22 @@ end
 
 % USER CONFIGURATION -----------------------------------------------------------
 
-fprintf("\nDefining user settings...");
-
 % Define PIV experiment parameters.
 nc = 3;   % case to process
-np = 1;   % plane to process
+np = 8;   % plane to process
 Nr = 5;   % number of runs
 Nt = 180; % number of timesteps
 fmt_t = "%0" + strlength(string(Nt)) + "d"; % format string for paths
 
-% Define calibration error in pixels.
+fprintf("\nDefining user settings for case %d, plane %d...", nc, np);
+
+% Define calibration error in pixels (ϵ_cal).
 % This is based on human error in clicking the calibration grid points during
 % processing. Typical values are between 0.5 px and 1 px.
 err_cal = 0.5; % [px]
 
-% Define t-penalty for 95% CI. For 5 runs (4 DOF), `tval_95=2.7764`.
-tval_95 = 2.7764;
+% Define if background subtraction was used in preprocessing.
+subbkg_enable = true;
 
 % Define input paths.
 script_dir = pwd();
@@ -111,12 +79,11 @@ masks_all = data_msk.masks_in_frame;
 % Parse calibration settings.
 % - If x_dir == 2, "x increases towards the left".
 % - If y_dir == 2, "y increases towards the top".
-dt        = str2double(data_stg.time_inp)/1000; % time step [s]
 scale_xy  = data_stg.calxy; % calibration grid scaling factor [m/px]
 scale_u   = data_stg.calu;  % u-velocity scaling factor [(m/s)/px]
 scale_v   = data_stg.calv;  % v-velocity scaling factor [(m/s)/px]
 L_grid    = str2double(data_stg.realdist)/1000; % Real calibration spacing [m]
-N_px      = L_grid / scale_xy; % pixel calibration spacing [px]
+N_px      = L_grid / scale_xy; % pixel calibration spacing [px] (Nₚₓ)
 x_dir     = data_stg.x_axis_direction; % x-direction
 y_dir     = data_stg.y_axis_direction; % y-direction
 
@@ -134,11 +101,68 @@ Ny = floor(((img_y - win_size) / step_size)) + 1; % num y-points
 clahe_enable  = data_stg.clahe_enable;
 highp_enable  = data_stg.enable_highpass;
 wiener_enable = data_stg.wienerwurst;
+% intcap_enable = data_stg.enable_intenscap; % NOT SUPPORTED
 clahe_size    = str2double(data_stg.clahe_size);
 highp_size    = str2double(data_stg.highp_size);
 wiener_size   = str2double(data_stg.wienerwurstsize);
 
 fprintf(' Done!\n');
+
+% GET FILE PATHS ---------------------------------------------------------------
+
+% Get filepaths for images
+items = dir(fold_img);
+isDirFlags = [items.isdir] & ~ismember({items.name}, {'.', '..'});
+subDirs = items(isDirFlags);
+fullPaths = string(fullfile({subDirs.folder}, {subDirs.name}));
+subdir_list = fullPaths(:);
+file_img_all = strings(2 * Nt, Nr);
+for nr = 1:Nr
+  items = dir(subdir_list(nr));
+  isFileFlags = ~ismember({items.name}, {'.', '..'});
+  files = items(isFileFlags);
+  fullPaths = string(fullfile({files.folder}, {files.name}));
+  file_img_all(:, nr) = fullPaths;
+end
+
+% Get filepaths for velocity fields
+items = dir(fold_vel);
+isDirFlags = [items.isdir] & ~ismember({items.name}, {'.', '..'});
+subDirs = items(isDirFlags);
+fullPaths = string(fullfile({subDirs.folder}, {subDirs.name}));
+subdir_list = fullPaths(:);
+file_vel_all = strings(Nt, Nr);
+for nr = 1:Nr
+  items = dir(subdir_list(nr));
+  isFileFlags = ~ismember({items.name}, {'.', '..'});
+  files = items(isFileFlags);
+  fullPaths = string(fullfile({files.folder}, {files.name}));
+  file_vel_all(:, nr) = fullPaths;
+end
+
+% COMPUTE BACKGROUND IMAGES ----------------------------------------------------
+% - This step is required if PIVlab background subtraction was used when
+%   preprocessing the images.
+% - Computes background image by computing mean intensity, which is the default
+%   in PIVlab.
+% - To check if they were computed correctly, write background images to file
+%   with the following command, then open in system image viewer:
+%   `imwrite(img_bkg(:, :, 1), 'tmp/uncertainty_tmp.png');`
+
+img_bkg = zeros(img_y, img_x, Nr, 'uint8');
+if subbkg_enable == 1
+  fprintf('\nInitializing background image computation...\n');
+  prog = ProgressBar(Nr, taskname='Computing background images:', ui='cli');
+  for nr = 1:Nr
+    [N_files, ~] = size(file_img_all);
+    img_stack = zeros(img_y, img_x, N_files, 'uint8');
+    parfor i = 1:N_files
+      img_stack(:, :, i) = imread(file_img_all(i, nr));
+    end
+    img_bkg(:, :, nr) = uint8(mean(double(img_stack), 3));
+    count(prog)
+  end
+end
 
 % UNCERTAINTY COMPUTATION ------------------------------------------------------
 
@@ -179,7 +203,6 @@ parfor nt = 1:Nt
   Y_runs = zeros(Ny, Nx, Nr);
   U_runs = zeros(Ny, Nx, Nr);
   V_runs = zeros(Ny, Nx, Nr);
-  M_runs = zeros(Ny, Nx, Nr);
   unc_disp_u_runs = zeros(Ny, Nx, Nr);
   unc_disp_v_runs = zeros(Ny, Nx, Nr);
   unc_disp_m_runs = zeros(Ny, Nx, Nr);
@@ -194,63 +217,93 @@ parfor nt = 1:Nt
 
     % 1. Get filepaths ---------------------------------------------------------
 
-    % Get filepaths for image pair at this timestep/run.
-    strA = sprintf(fmt_t, iA);
-    strB = sprintf(fmt_t, iB);
-    fold_img_run = compose(fold_img + "/img_c%d_p%d_r%d", nc, np, nr);
-    file_imgA = compose(fold_img_run + "/img_c%d_p%d_r%d_%s.tif", ...
-      nc, np, nr, strA);
-    file_imgB = compose(fold_img_run + "/img_c%d_p%d_r%d_%s.tif", ...
-      nc, np, nr, strB);
+    file_imgA = file_img_all(iA, nr);
+    file_imgB = file_img_all(iB, nr);
+    file_vel = file_vel_all(nt, nr);
 
-    % Get filepath for velocity field at this timestep/run.
-    strT = sprintf(fmt_t, nt);
-    fold_vel_run = compose(fold_vel + "/vel_c%d_p%d_r%d", nc, np, nr);
-    file_vel = compose(fold_vel_run + "/vel_c%d_p%d_r%d_%s.txt", ...
-      nc, np, nr, strT);
+    % 2. Load raw image pair and apply preprocessing ---------------------------
+    % Processing steps follow PIVlab defaults:
+    %   A. Background subtraction
+    %   B. CLAHE filter
+    %   C. High-pass filter
+    %   D. Wiener denoise filter
+    %   E. Intensity capping
 
-    % 2. Load raw image pair and preprocess ------------------------------------
-
-    imgA_raw = double(imread(file_imgA));
-    imgB_raw = double(imread(file_imgB));
-
-    % HIGH-PASS FILTER (Subtract Gaussian blur to flatten background glow)
-    if highp_enable == 1
-      imgA_hp = imgA_raw - imfilter(imgA_raw, ...
-        fspecial('gaussian', highp_size*4, highp_size), 'replicate');
-      imgB_hp = imgB_raw - imfilter(imgB_raw, ...
-        fspecial('gaussian', highp_size*4, highp_size), 'replicate');
-    else
-      imgA_hp = imgA_raw;
-      imgB_hp = imgB_raw;
+    % Load image pair and convert to `uint8` if necessary. (0-255)
+    imgA_raw = imread(file_imgA);
+    imgB_raw = imread(file_imgB);
+    if ~isa(imgA_raw, 'uint8')
+      imgA_raw = im2uint8(imgA_raw);
+      imgB_raw = im2uint8(imgB_raw);
     end
 
-    % WIENER FILTER (Denoise camera grain)
-    if wiener_enable == 1
-      imgA_w = wiener2(imgA_hp, [wiener_size, wiener_size]);
-      imgB_w = wiener2(imgB_hp, [wiener_size, wiener_size]);
-    else
-      imgA_w = imgA_hp;
-      imgB_w = imgB_hp;
+    % Use raw image by default, these will be overwritten at each preprocessing
+    % step that is enabled.
+    imgA_prc = imgA_raw;
+    imgB_prc = imgB_raw;
+
+    % 2A. Background Subtraction
+    if subbkg_enable == 1
+      % Perform background subtraction.
+      imgA_sub = imsubtract(imgA_prc, img_bkg(:, :, nr));
+      imgB_sub = imsubtract(imgB_prc, img_bkg(:, :, nr));
+      % Overwrite processed image pair.
+      imgA_prc = imgA_sub;
+      imgB_prc = imgB_sub;
     end
 
-    % CLAHE FILTER (Normalize intensity and pop particle contrast)
+    % Convert to normalized double (0-1) for MATLAB preprocessing functions.
+    imgA_prc = im2double(imgA_prc);
+    imgB_prc = im2double(imgB_prc);
+
+    % 2B. CLAHE Filter
     if clahe_enable == 1
-      % Convert image temporarily back to 0-1 scale required by adapthisteq.
-      imgA_norm = (imgA_w - min(imgA_w(:))) / (max(imgA_w(:)) - min(imgA_w(:)));
-      imgB_norm = (imgB_w - min(imgB_w(:))) / (max(imgB_w(:)) - min(imgB_w(:)));
-      % Apply CLAHE using your target tile size.
-      % PIVlab sets NumTiles based on image dimension divided by clahe_size.
-      tiles_y = round(img_y / clahe_size);
+      % Define CLAHE parameters.
+      clip_limit = 0.01;        % PIVlab default is 0.01
+      distribution = 'uniform'; % PIVlab default is 'uniform'
+      % Compute dynamic grid tiles. PIVlab automatically calculates the
+      % 'NumTiles' layout by dividing the total resolution by the target
+      % window size.
       tiles_x = round(img_x / clahe_size);
-      imgA_prc = adapthisteq(imgA_norm, 'NumTiles', [tiles_y, tiles_x], ...
-        'ClipLimit', 0.01) * 255;
-      imgB_prc = adapthisteq(imgB_norm, 'NumTiles', [tiles_y, tiles_x], ...
-        'ClipLimit', 0.01) * 255;
-    else
-      imgA_prc = imgA_w;
-      imgB_prc = imgB_w;
+      tiles_y = round(img_y / clahe_size);
+      % Apply CLAHE parameters.
+      imgA_clahe = adapthisteq(imgA_prc, 'NumTiles', [tiles_y, tiles_x], ...
+        'ClipLimit', clip_limit, 'Distribution', distribution);
+      imgB_clahe = adapthisteq(imgB_prc, 'NumTiles', [tiles_y, tiles_x], ...
+        'ClipLimit', clip_limit, 'Distribution', distribution);
+      % Overwrite processed image pair in regular 1-255 pixel space.
+      imgA_prc = imgA_clahe;
+      imgB_prc = imgB_clahe;
     end
+
+    % 2C. High-Pass Filter
+    if highp_enable == 1
+      % Create Gaussian low-pass filter profile used by PIVlab.
+      h_gaussian = fspecial('gaussian', highp_size, highp_size);
+      % Generate blurred low-frequency baseline.
+      imgA_blur = imfilter(imgA_prc, h_gaussian, 'replicate');
+      imgB_blur = imfilter(imgB_prc, h_gaussian, 'replicate');
+      % Subtract blur to execute high-pass filter.
+      imgA_highp = imgA_prc - imgA_blur;
+      imgB_highp = imgB_prc - imgB_blur;
+      % Clamp output to zero to prevent negative intensity decimal drops.
+      imgA_prc = max(imgA_highp, 0);
+      imgB_prc = max(imgB_highp, 0);
+    end
+
+    % 2D. Wiener Denoise Filter
+    if wiener_enable == 1
+      imgA_wiener = wiener2(imgA_prc, [wiener_size, wiener_size]);
+      imgB_wiener = wiener2(imgB_prc, [wiener_size, wiener_size]);
+      imgA_prc = imgA_wiener;
+      imgB_prc = imgB_wiener;
+    end
+
+    % 2E. Intensity Capping -> NOT SUPPORTED AS IT WAS NOT NEEDED BY THE AUTHOR
+
+    % Convert to 0-255 double for PIVlab uncertainty functions.
+    imgA_prc = imgA_prc .* 255.0
+    imgB_prc = imgB_prc .* 255.0
 
     % 3. Import PIVlab field data and reshape to grid --------------------------
 
@@ -264,7 +317,8 @@ parfor nt = 1:Nt
     Y = txt_data(:, 2); % y [m]
     U = txt_data(:, 3); % u [m/s]
     V = txt_data(:, 4); % v [m/s]
-    M = hypot(U, V); % magnitude [m/s]
+    M = hypot(U, V); % velocity magnitude [m/s]
+    vtype = txt_data(:, 5); % vector type [-], to mask interpolated vectors
 
     % PIVlab exports columns sequentially. Reshape to matrix grid [Ny, Nx].
     X_grid = reshape(X, [Ny, Nx]);
@@ -272,6 +326,7 @@ parfor nt = 1:Nt
     U_grid = reshape(U, [Ny, Nx]);
     V_grid = reshape(V, [Ny, Nx]);
     M_grid = reshape(M, [Ny, Nx]);
+    vtype_grid = reshape(vtype, [Ny, Nx]);
 
     % Flip the grid matrices based on PIVlab calibration.
     % - If x_dir == 2, "x increases towards the left" and the matrices must be
@@ -284,6 +339,7 @@ parfor nt = 1:Nt
       U_grid = fliplr(U_grid);
       V_grid = fliplr(V_grid);
       M_grid = fliplr(M_grid);
+      vtype_grid = fliplr(vtype_grid);
     end
     if y_dir ~= 2
       X_grid = flipud(X_grid);
@@ -291,24 +347,23 @@ parfor nt = 1:Nt
       U_grid = flipud(U_grid);
       V_grid = flipud(V_grid);
       M_grid = flipud(M_grid);
+      vtype_grid = flipud(vtype_grid);
     end
 
-    % 4. Compute displacement uncertainties ------------------------------------
+    % 4. Compute displacement uncertainty (σ⃗_disp) -----------------------------
 
     % Create window grid in pixels.
     first_center = win_size / 2; % first center is at half the window size
     grdx = ((0:(Nx-1)) * step_size) + first_center;
     grdy = (((0:(Ny-1)) * step_size) + first_center)';
 
-    % Compute disparity components using PIVlab `uncertainty.disparity`
-    % function.
+    % Compute disparity.
     rsearch = 8;      % PIVlab default is 8
     weight = 'peaks'; % PIVlab default is 'peaks'
     [dispx, dispy, immult, peaks] = uncertainty.disparity( ...
       imgA_prc, imgB_prc, rsearch, weight);
 
-    % Compute aggregate window uncertainty components using PIVlab
-    % `uncertainty.error_window` function.
+    % Compute pixel displacement uncertainty.
     ROI = [];             % leave empty to process entire frame
     nRmsLength = 1;       % PIVlab default is 1
     pos_weight = 'gauss'; % PIVlab default is 'gauss'
@@ -319,14 +374,14 @@ parfor nt = 1:Nt
       dispy, peaks, grdx, grdy, win_size, nRmsLength, pos_weight, ROI);
     warning('on', 'MATLAB:colon:nonIntegerIndex');
 
-    % Get poly mask and convert to grid.
+    % Get pixel mask and convert to grid.
     [XG, YG] = meshgrid(grdx, grdy);
     mask_poly = masks_all{1, nt}{1, 2};
     mask_x = mask_poly(:, 1);
     mask_y = mask_poly(:, 2);
     mask_grid = inpolygon(XG, YG, mask_x, mask_y);
 
-    % Apply mask to uncertainties.
+    % Apply pixel mask
     etotx(mask_grid)   = NaN;
     etoty(mask_grid)   = NaN;
     ebiasx(mask_grid)  = NaN;
@@ -356,31 +411,37 @@ parfor nt = 1:Nt
       ermsy   = flipud(ermsy);
     end
 
-    % Convert pixel displacement uncertainties to velocity.
-    % Absolute value must be used because pixel displacements uncertainties
-    % are unsigned scalar magnitudes.
+    % Apply vector filtering mask
+    mask_vtype = (vtype_grid == 2) | (vtype_grid == 0)
+    etotx(mask_vtype)   = NaN;
+    etoty(mask_vtype)   = NaN;
+    ebiasx(mask_vtype)  = NaN;
+    ebiasy(mask_vtype)  = NaN;
+    ermsx(mask_vtype)   = NaN;
+    ermsy(mask_vtype)   = NaN;
+
+    % Convert pixel displacement uncertainties to velocity (σ⃗_disp).
     unc_disp_u_tr = etotx * abs(scale_u);
     unc_disp_v_tr = etoty * abs(scale_v);
-    unc_disp_m_tr = hypot(unc_disp_u_tr, unc_disp_v_tr);
+    unc_disp_m_tr = hypot(U_grid .* unc_disp_u_tr, V_grid .* unc_disp_v_tr) ...
+      ./ M_grid;
 
-    % 5. Compute calibration and systematic uncertainties ----------------------
-
-    % Compute calibration uncertainty.
+    % 5. Compute calibration uncertainties (σ⃗_cal) -----------------------------
     unc_cal_u_tr = U_grid * err_cal / N_px;
     unc_cal_v_tr = V_grid * err_cal / N_px;
-    unc_cal_m_tr = M_grid * err_cal / N_px;
+    unc_cal_m_tr = hypot(U_grid .* unc_cal_u_tr, V_grid .* unc_cal_v_tr) ...
+      ./ M_grid;
 
-    % Compute systematic uncertainty.
+    % 6. Compute systematic uncertainty (σ⃗_sys) --------------------------------
     unc_sys_u_tr = hypot(unc_disp_u_tr, unc_cal_u_tr);
     unc_sys_v_tr = hypot(unc_disp_v_tr, unc_cal_v_tr);
     unc_sys_m_tr = hypot(unc_disp_m_tr, unc_cal_m_tr);
 
-    % Store data at this timestep/run.
+    % 7. Store data at this timestep/run ---------------------------------------
     X_runs(:, :, nr) = X_grid;
     Y_runs(:, :, nr) = Y_grid;
     U_runs(:, :, nr) = U_grid;
     V_runs(:, :, nr) = V_grid;
-    M_runs(:, :, nr) = M_grid;
     unc_disp_u_runs(:, :, nr) = unc_disp_u_tr;
     unc_disp_v_runs(:, :, nr) = unc_disp_v_tr;
     unc_disp_m_runs(:, :, nr) = unc_disp_m_tr;
@@ -407,22 +468,22 @@ parfor nt = 1:Nt
   unc_sys_v_t = max(unc_sys_v_runs, [], 3, 'omitnan');
   unc_sys_m_t = max(unc_sys_m_runs, [], 3, 'omitnan');
 
-  % Compute mean grid and field data accross runs (for viz).
+  % Compute mean field data across runs.
   X_avg_t = mean(X_runs, 3, 'omitnan');
   Y_avg_t = mean(Y_runs, 3, 'omitnan');
   U_avg_t = mean(U_runs, 3, 'omitnan');
   V_avg_t = mean(V_runs, 3, 'omitnan');
-  M_avg_t = mean(M_runs, 3, 'omitnan');
+  M_avg_t = hypot(U_avg_t, V_avg_t);
 
-  % Compute expanded random uncertainty across runs using 95% CI.
+  % Compute random uncertainty across runs (σ⃗_rand).
   U_std_t = std(U_runs, 0, 3, 'omitnan');
   V_std_t = std(V_runs, 0, 3, 'omitnan');
-  M_std_t = std(M_runs, 0, 3, 'omitnan');
-  unc_rand_u_t = tval_95 * U_std_t / sqrt(Nr);
-  unc_rand_v_t = tval_95 * V_std_t / sqrt(Nr);
-  unc_rand_m_t = tval_95 * M_std_t / sqrt(Nr);
+  unc_rand_u_t = U_std_t / sqrt(Nr);
+  unc_rand_v_t = V_std_t / sqrt(Nr);
+  unc_rand_m_t = hypot(U_avg_t .* unc_rand_u_t, V_avg_t .* unc_rand_v_t) ...
+    ./ M_avg_t;
 
-  % Compute total combined systematic and expanded random uncertainty.
+  % Compute total uncertainty (σ⃗_tot).
   unc_tot_u_t = hypot(unc_sys_u_t, unc_rand_u_t);
   unc_tot_v_t = hypot(unc_sys_v_t, unc_rand_v_t);
   unc_tot_m_t = hypot(unc_sys_m_t, unc_rand_m_t);
@@ -458,15 +519,14 @@ fprintf('\nDone!\n');
 % EXPORT UNCERTAINTY FIELDS ---------------------------------------------------
 
 fprintf("\nExporting uncertainty fields...");
-
-% Loop through timesteps and export uncertainties.
 for nt = 1:Nt
-  % Create filepath for current timestep.
+
+  % Define output file.
   fxt = ".csv";
   strT = sprintf(fmt_t, nt);
   file_stat = compose(fold_stat + "/piv_stat_c%d_p%d_%s%s", nc, np, strT, fxt);
 
-  % Reshape data at this time step to column vectors
+  % Reshape data at this time step to column vectors.
   vec_x = reshape(X_avg(:, :, nt), [], 1);
   vec_y = reshape(Y_avg(:, :, nt), [], 1);
   vec_u = reshape(U_avg(:, :, nt), [], 1);
@@ -515,16 +575,16 @@ end
 
 fprintf(' Done!\n');
 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % END: piv_uncertainty.m
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %{
 
 % CHECK: Plot uncertainty fields -----------------------------------------------
 
 % Define uncertainty to plot
-uncertainty_slice = unc_disp_m(:, :, 1);
+uncertainty_slice = unc_disp_m(:, :, 60);
 % 1. Normalize your uncertainty grid between 0 and 1
 min_val = min(uncertainty_slice(:));
 max_val = max(uncertainty_slice(:));
@@ -533,15 +593,14 @@ normalized_grid = (uncertainty_slice - min_val) / (max_val - min_val);
 cmap = hot(256);
 rgb_image = ind2rgb(im2uint8(normalized_grid), cmap);
 % 3. Use imwrite to dump the pixel data directly to a PNG
-% This runs natively in a CLI with zero graphic requirements
 imwrite(rgb_image, 'tmp/uncertainty_tmp.png');
 
 % CHECK: All uncertainties should be positive ----------------------------------
 
 % Define uncertainty to check
-unc_check = unc_disp_v(:);
+uncertainty_slice = unc_disp_v(:);
 % Check that all values are positive
-is_positive = (unc_check >= 0);
+is_positive = (uncertainty_slice >= 0);
 isnot_nan = ~isnan(uncertainty_slice);
 all(is_positive(isnot_nan), 'all')
 
