@@ -6,10 +6,27 @@
 % Department of Mechanical and Aerospace Engineering
 % University of Central Florida, Orlando, FL, USA
 % Author: Carlos Soto
-% Edited: 2026-09-10
+% Edited: 2026-09-11
 % ------------------------------------------------------------------------------
 % See README for documentation.
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Copyright (C) 2026 Carlos Soto
+%
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+%
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License
+% along with this program.  If not, see <https://gnu.org>.
+
+% MATLAB CONFIGURATION ---------------------------------------------------------
 
 % Make sure PIVlab's directory structure is added to the MATLAB path.
 % To get the PIVlab toolbox installation directory run the following command:
@@ -421,8 +438,8 @@ parfor nt = 1:Nt
     ermsy(mask_vtype)   = NaN;
 
     % Convert pixel displacement uncertainties to velocity (σ⃗_disp).
-    unc_disp_u_tr = etotx * abs(scale_u);
-    unc_disp_v_tr = etoty * abs(scale_v);
+    unc_disp_u_tr = ebiasx * abs(scale_u);
+    unc_disp_v_tr = ebiasy * abs(scale_v);
     unc_disp_m_tr = hypot(U_grid .* unc_disp_u_tr, V_grid .* unc_disp_v_tr) ...
       ./ M_grid;
 
@@ -453,20 +470,20 @@ parfor nt = 1:Nt
     unc_sys_m_runs(:, :, nr)  = unc_sys_m_tr;
   end
 
-  % Compute max displacement uncertainty across runs.
-  unc_disp_u_t = max(unc_disp_u_runs, [], 3, 'omitnan');
-  unc_disp_v_t = max(unc_disp_v_runs, [], 3, 'omitnan');
-  unc_disp_m_t = max(unc_disp_m_runs, [], 3, 'omitnan');
+  % Compute mean displacement uncertainty across runs.
+  unc_disp_u_t = mean(unc_disp_u_runs, 3, 'omitnan');
+  unc_disp_v_t = mean(unc_disp_v_runs, 3, 'omitnan');
+  unc_disp_m_t = mean(unc_disp_m_runs, 3, 'omitnan');
 
-  % Compute max calibration uncertainty across runs.
-  unc_cal_u_t = max(unc_cal_u_runs, [], 3, 'omitnan');
-  unc_cal_v_t = max(unc_cal_v_runs, [], 3, 'omitnan');
-  unc_cal_m_t = max(unc_cal_m_runs, [], 3, 'omitnan');
+  % Compute mean calibration uncertainty across runs.
+  unc_cal_u_t = mean(unc_cal_u_runs, 3, 'omitnan');
+  unc_cal_v_t = mean(unc_cal_v_runs, 3, 'omitnan');
+  unc_cal_m_t = mean(unc_cal_m_runs, 3, 'omitnan');
 
-  % Compute max systematic uncertainty across runs.
-  unc_sys_u_t = max(unc_sys_u_runs, [], 3, 'omitnan');
-  unc_sys_v_t = max(unc_sys_v_runs, [], 3, 'omitnan');
-  unc_sys_m_t = max(unc_sys_m_runs, [], 3, 'omitnan');
+  % Compute mean systematic uncertainty across runs.
+  unc_sys_u_t = mean(unc_sys_u_runs, 3, 'omitnan');
+  unc_sys_v_t = mean(unc_sys_v_runs, 3, 'omitnan');
+  unc_sys_m_t = mean(unc_sys_m_runs, 3, 'omitnan');
 
   % Compute mean field data across runs.
   X_avg_t = mean(X_runs, 3, 'omitnan');
