@@ -26,21 +26,28 @@ manual][man-pivlab] for details.
 
 ## Table of Contents
 
-- [Requirements][hdr-req]
+- [Prerequisites][hdr-req]
 - [Uncertainty Calculation][hdr-unc]
 - [Error Propagation Method for Uncertainty Magnitude][hdr-erp]
 - [RSS Method for Uncertainty Combinations][hdr-rss]
 
-## Requirements
+## Prerequisites
 
 ### MATLAB
 
-- Image Processing Toolbox.
-- PIVlab Add-On.
-- Parallel Processing Toolbox (optional but recommended).
+- MATLAB (v2025b or newer).
+- MATLAB Image Processing Toolbox.
+- PIVlab Toolbox (v3.14 or newer) - Licensed under the MIT License. Available on
+  the [MATLAB File Exchange][mat-pivlab] or [GitHub][gh-pivlab].
+- MATLAB Parallel Processing Toolbox. _Optional but recommended._
   - If parallel processing is disabled, all `parfor` loops must be changed to
     standard `for` loops.
-- Versions Tested: MATLAB 2025b with PIVlab 3.14.
+- `ProgressBar.m` - Licensed under the MIT License. Available on
+  [GitHub][gh-prog].
+  - This file defines the `ProgressBar` function used to track the time step
+    loop and should be placed in the same directory as the
+    `pivlab_uncertainty.m` script.
+  - Works for both single-threaded and multi-threaded execution.
 
 ### Files
 
@@ -48,27 +55,19 @@ manual][man-pivlab] for details.
 - Exported velocity field file sequence (`.txt`).
 - Exported PIVlab settings file (`.mat`).
   - Alternatively, provide values manually in the script.
-- _NOTE:_ Top-level directory paths should be configured to reflect the user's
-  naming conventions and operating system.
-
-#### Optional but Recommended Files
-
-- Exported PIVlab mask file (`.mat`). If masks are not available, the following
-  must be commented out from the script:
-  - In the _USER CONFIGURATION_ section:
-    - The `file_msk` definition that specifies the mask file.
-  - In the _IMPORT SETTINGS AND MASKS_ section:
-    - The `data_msk` definition that loads the masks.
-    - The `masks_all` definition that parses the masks.
-  - In the _UNCERTAINTY COMPUTATION_ section:
-    - The masking code block in Step 4 of the `nr = 1:Nr` loop.
-- `ProgressBar.m`. This file defines the `ProgressBar` function used to track
-  the timestep loop and should be placed in the same directory as this script.
-  It works for both single-threaded and multi-threaded execution. If it is
-  missing, the following must be commented out of the script
-  - All `prog` definitions placed before the start of `nt = 1:Nt` loops.
-  - All `count(prog)` definitions inside the `nt = 1:Nt` loops (final step
-    inside the loops).
+- Exported PIVlab mask file (`.mat`). _Optional but recommended._
+  - If masks are not available, the following must be commented out from the
+    script before execution:
+    - In the _USER CONFIGURATION_ section:
+      - The `file_msk` definition that specifies the mask file.
+    - In the _IMPORT SETTINGS AND MASKS_ section:
+      - The `data_msk` definition that loads the masks.
+      - The `masks_all` definition that parses the masks.
+    - In the _UNCERTAINTY COMPUTATION_ section:
+      - The masking code block in Step 4 of the `nr = 1:Nr` loop.
+- _NOTE:_ Top-level directory paths should be configured in the
+  `pivlab_uncertainty.m` script to reflect the user's naming conventions and
+  operating system.
 
 ## Uncertainty Calculation
 
@@ -278,9 +277,17 @@ $$
 \|\sigma_1 + \sigma_2 + \cdots + \sigma_N\|
 $$
 
+## License
+
+This project is licensed under the GNU General Public License v3.0 - see the
+[LICENSE](LICENSE) file for details.
+
 <!-- prettier-ignore-start -->
+[mat-pivlab]: https://www.mathworks.com/matlabcentral/fileexchange/27659-pivlab-particle-image-velocimetry-piv-tool-with-gui
+[gh-pivlab]: https://github.com/Shrediquette/PIVlab
+[gh-prog]: https://github.com/elgar328/matlab-code-examples/tree/main/tools/ProgressBar
 [man-pivlab]: https://www.pivlab.de/manual/pages/piv-settings.html#shared
-[hdr-req]: #requirements
+[hdr-req]: #prerequisites
 [hdr-unc]: #uncertainty-calculation
 [hdr-tot]: #total-uncertainty
 [hdr-rand]: #random-uncertainty
@@ -290,6 +297,3 @@ $$
 [hdr-erp]: #error-propagation-method-for-uncertainty-magnitude
 [hdr-rss]: #root-sum-square-rss-method-for-uncertainty-combinations
 <!-- prettier-ignore-end -->
-
-$$
-$$
