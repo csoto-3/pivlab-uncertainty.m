@@ -10,7 +10,7 @@ Experimental Fluid Mechanics Laboratory
 Department of Mechanical and Aerospace Engineering
 University of Central Florida, Orlando, FL, USA
 Author: Carlos Soto
-Edited: 2026-09-11
+Edited: 2026-09-15
 ```
 
 This script (`pivlab_uncertainty.m`) was created to compute the PIV uncertainty
