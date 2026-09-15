@@ -208,13 +208,13 @@ $$
 \frac{\left\Vert\vec{u} \odot \vec{\sigma}\right\Vert}{\left\Vert\vec{u}\right\Vert}
 $$
 
-- $\vec{u}=\langle u,v \rangle$ velocity vector
-- $\vec{\sigma}=\langle \sigma_u,\sigma_v \rangle$ uncertainty vector
+- ${\vec{u}=\langle u,v \rangle}$ velocity vector
+- ${\vec{\sigma}=\langle \sigma_u,\sigma_v \rangle}$ uncertainty vector
 
 ### Derivation of the Simplified Error Propagation Formula
 
-Let $\vec{u}=\langle u,v \rangle$ represent a single velocity vector and let
-$\vec{\sigma}=\langle \sigma_u,\sigma_v \rangle$ represent a single
+Let ${\vec{u}=\langle u,v \rangle}$ represent a single velocity vector and let
+${\vec{\sigma}=\langle \sigma_u,\sigma_v \rangle}$ represent a single
 corresponding uncertainty vector. The velocity magnitude $M$ is then given by:
 
 $$\left\Vert\vec{u}\right\Vert=\sqrt{u^2 + v^2}=M$$
