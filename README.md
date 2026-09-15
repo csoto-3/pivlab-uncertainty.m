@@ -1,7 +1,6 @@
 ---
 documentclass: scrartcl
 geometry: margin=1in
-monofont: JuliaMono Nerd Font Mono
 ---
 
 # PIVlab Uncertainty Computation Script
@@ -91,8 +90,8 @@ $$
 \left\Vert\sigma_{M,\mathrm{rand}} + \sigma_{M,\mathrm{sys}}\right\Vert
 $$
 
-- $\vec{\sigma}_\mathrm{rand}$= [random uncertainty][hdr-rand]
-- $\vec{\sigma}_\mathrm{sys}$= [systematic uncertainty][hdr-sys]
+- ${\vec{\sigma}_\mathrm{rand}=}$ [random uncertainty][hdr-rand]
+- ${\vec{\sigma}_\mathrm{sys}=}$ [systematic uncertainty][hdr-sys]
 - Uncertainty magnitude is computed using the [RSS method][hdr-rss].
 
 ### Random Uncertainty
@@ -104,8 +103,8 @@ $$
 \frac{\left\Vert\vec{u} \odot \vec{\sigma}_\mathrm{rand}\right\Vert}{\left\Vert\vec{u}\right\Vert}
 $$
 
-- $\vec{s}$= standard deviation of velocity field across runs
-- $N_r$= number of runs
+- ${\vec{s}=}$ standard deviation of velocity field across runs
+- ${N_r=}$ number of runs
 - Uncertainty magnitude is computed using the [error propagation
   method][hdr-erp].
 
@@ -121,8 +120,8 @@ $$
 \left\Vert\sigma_{M,\mathrm{cal}} + \sigma_{M,\mathrm{disp}}\right\Vert
 $$
 
-- $\vec{\sigma}_\mathrm{cal}$= [calibration uncertainty][hdr-cal]
-- $\vec{\sigma}_\mathrm{disp}$= [displacement uncertainty][hdr-disp]
+- ${\vec{\sigma}_\mathrm{cal}=}$ [calibration uncertainty][hdr-cal]
+- ${\vec{\sigma}_\mathrm{disp}=}$ [displacement uncertainty][hdr-disp]
 - Uncertainty components are computed for each run.
 - Uncertainty magnitude is computed using the [RSS method][hdr-rss].
 - The ensemble average across runs is then taken.
@@ -139,11 +138,11 @@ $$
 \frac{\left\Vert\vec{u} \odot \vec{\sigma}_\mathrm{cal}\right\Vert}{\left\Vert\vec{u}\right\Vert}
 $$
 
-- $\vec{u}$= velocity vector
-- $\epsilon_\mathrm{cal}$= pixel calibration error
+- ${\vec{u}=}$ velocity vector
+- ${\epsilon_\mathrm{cal}=}$ pixel calibration error
   - Result of human variance when selecting the calibration grid points PIVlab.
   - Typical values are between $0.5\,\mathrm{px}$ and $1.0\,\mathrm{px}$.
-- $N_\mathrm{px}$= number of pixels between calibration grid points
+- ${N_\mathrm{px}=}$ number of pixels between calibration grid points
 - Uncertainty components are computed for each run.
 - Uncertainty magnitude is computed for each run using the [error propagation
   method][hdr-erp].
@@ -208,8 +207,8 @@ $$
 \frac{\left\Vert\vec{u} \odot \vec{\sigma}\right\Vert}{\left\Vert\vec{u}\right\Vert}
 $$
 
-- ${\vec{u}=\langle u,v \rangle}$ velocity vector
-- ${\vec{\sigma}=\langle \sigma_u,\sigma_v \rangle}$ uncertainty vector
+- ${\vec{u}=\langle u,v \rangle=}$ velocity vector
+- ${\vec{\sigma}=\langle \sigma_u,\sigma_v \rangle=}$ uncertainty vector
 
 ### Derivation of the Simplified Error Propagation Formula
 
