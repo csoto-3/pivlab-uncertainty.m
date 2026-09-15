@@ -83,12 +83,12 @@ manual][man-pivlab] for details.
 
 $$
 \vec{\sigma}_\mathrm{tot} =
-\|\vec{\sigma}_\mathrm{rand} + \vec{\sigma}_\mathrm{sys}\|
+\left\Vert\vec{\sigma}_\mathrm{rand} + \vec{\sigma}_\mathrm{sys}\right\Vert
 $$
 
 $$
 \sigma_{M,\mathrm{tot}} =
-\|\sigma_{M,\mathrm{rand}} + \sigma_{M,\mathrm{sys}}\|
+\left\Vert\sigma_{M,\mathrm{rand}} + \sigma_{M,\mathrm{sys}}\right\Vert
 $$
 
 - $\vec{\sigma}_\mathrm{rand}=$ [random uncertainty][hdr-rand]
@@ -101,7 +101,7 @@ $$\vec{\sigma}_\mathrm{rand} = \frac{\vec{s}}{\sqrt{N_r}}$$
 
 $$
 \sigma_{M,\mathrm{rand}} =
-\frac{\|\vec{u} \odot \vec{\sigma}_\mathrm{rand}\|}{\|\vec{u}\|}
+\frac{\left\Vert\vec{u} \odot \vec{\sigma}_\mathrm{rand}\right\Vert}{\left\Vert\vec{u}\right\Vert}
 $$
 
 - $\vec{s}=$ standard deviation of velocity field across runs
@@ -113,12 +113,12 @@ $$
 
 $$
 \vec{\sigma}_\mathrm{sys} =
-\|\vec{\sigma}_\mathrm{cal} + \vec{\sigma}_\mathrm{disp}\|
+\left\Vert\vec{\sigma}_\mathrm{cal} + \vec{\sigma}_\mathrm{disp}\right\Vert
 $$
 
 $$
 \sigma_{M,\mathrm{sys}} =
-\|\sigma_{M,\mathrm{cal}} + \sigma_{M,\mathrm{disp}}\|
+\left\Vert\sigma_{M,\mathrm{cal}} + \sigma_{M,\mathrm{disp}}\right\Vert
 $$
 
 - $\vec{\sigma}_\mathrm{cal}=$ [calibration uncertainty][hdr-cal]
@@ -136,7 +136,7 @@ $$
 
 $$
 \sigma_{M,\mathrm{cal}} =
-\frac{\|\vec{u} \odot \vec{\sigma}_\mathrm{cal}\|}{\|\vec{u}\|}
+\frac{\left\Vert\vec{u} \odot \vec{\sigma}_\mathrm{cal}\right\Vert}{\left\Vert\vec{u}\right\Vert}
 $$
 
 - $\vec{u}=$ velocity vector
@@ -158,7 +158,7 @@ $$\vec{\sigma}_\mathrm{disp}$$
 
 $$
 \sigma_{M,\mathrm{disp}} =
-\frac{\|\vec{u} \odot \vec{\sigma}_\mathrm{disp}\|}{\|\vec{u}\|}
+\frac{\left\Vert\vec{u} \odot \vec{\sigma}_\mathrm{disp}\right\Vert}{\left\Vert\vec{u}\right\Vert}
 $$
 
 - Uncertainty components are computed using PIVlab functions for each run.
@@ -205,7 +205,7 @@ propagation formula for a generic uncertainty magnitude.
 $$
 \sigma_M =
 \frac{\sqrt{u^2\sigma_u^2 + v^2\sigma_v^2}}{\sqrt{u^2 + v^2}} =
-\frac{\|\vec{u} \odot \vec{\sigma}\|}{\|\vec{u}\|}
+\frac{\left\Vert\vec{u} \odot \vec{\sigma}\right\Vert}{\left\Vert\vec{u}\right\Vert}
 $$
 
 - $\vec{u}=\langle u,v \rangle$ velocity vector
@@ -217,7 +217,7 @@ Let $\vec{u}=\langle u,v \rangle$ represent a single velocity vector and let
 $\vec{\sigma}=\langle \sigma_u,\sigma_v \rangle$ represent a single
 corresponding uncertainty vector. The velocity magnitude $M$ is then given by:
 
-$$\|\vec{u}\|=\sqrt{u^2 + v^2}=M$$
+$$\left\Vert\vec{u}\right\Vert=\sqrt{u^2 + v^2}=M$$
 
 The error propagation formula for the uncertainty magnitude $\sigma_M$ is then
 given by:
@@ -260,7 +260,7 @@ operator $\odot$, resulting in the expression presented earlier in this section.
 
 $$
 \sigma_M = \frac{\sqrt{u^2\sigma_u^2 + v^2\sigma_v^2}}{\sqrt{u^2 + v^2}} =
-\frac{\|\vec{u} \odot \vec{\sigma}\|}{\|\vec{u}\|}
+\frac{\left\Vert\vec{u} \odot \vec{\sigma}\right\Vert}{\left\Vert\vec{u}\right\Vert}
 $$
 
 ## Root Sum Square (RSS) Method for Uncertainty Combinations
@@ -274,7 +274,7 @@ magnitudes.
 $$
 \sigma_\mathrm{combo} =
 \sqrt{\sigma_1^2 + \sigma_2^2 + \cdots + \sigma_N^2} =
-\|\sigma_1 + \sigma_2 + \cdots + \sigma_N\|
+\left\Vert\sigma_1 + \sigma_2 + \cdots + \sigma_N\right\Vert
 $$
 
 ## License
