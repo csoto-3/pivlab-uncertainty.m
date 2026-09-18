@@ -50,12 +50,41 @@ manual][man-pivlab] for details.
 
 ### Files
 
+> _NOTE:_ All defined directory and file paths should be configured in the
+> `pivlab_uncertainty.m` script to reflect the user's naming conventions and
+> operating system.
+
 - Raw image file sequence (`.tif`).
   - Defined by `fold_img` in the _USER CONFIGURATION_ section of the script.
-  - Script automatically reads all file paths in this directory.
+  - This directory should contain subdirectories for each run.
+  - Script automatically reads all file paths in the subdirectories.
+
+    ```text
+    fold_img
+    ├── subfold_img_r1
+    │   ├── file_img_r1_001.tif
+    │   ├── file_img_r1_002.tif
+    │   └── etc.
+    ├── subfold_img_r2
+    └── etc.
+    ```
+
 - Exported velocity field file sequence (`.txt`).
   - Defined by `fold_vel` in the _USER CONFIGURATION_ section of the script.
-  - Script automatically reads all file paths in this directory.
+  - This directory should contain subdirectories for each run of velocity field
+    sequences.
+  - Script automatically reads all file paths in the subdirectories.
+
+    ```text
+    fold_vel
+    ├── subfold_vel_r1
+    │   ├── file_vel_r1_001.tif
+    │   ├── file_vel_r1_002.tif
+    │   └── etc.
+    ├── subfold_vel_r2
+    └── etc.
+    ```
+
 - Exported PIVlab settings file (`.mat`).
   - Defined by `file_stg` in the _USER CONFIGURATION_ section of the script.
   - Alternatively, provide values manually in the script.
@@ -69,14 +98,18 @@ manual][man-pivlab] for details.
       - Comment out `masks_all`, which parses the masks from `data_msk`.
 - Output directory, defined by `fold_stat` in the _USER CONFIGURATION_ section
   of the script.
-- Output file paths, defined by `file_stat` in the _EXPORT UNCERTAINTY FIELDS_
-  section of the script.
+  - Output file paths are defined by `file_stat` in the _EXPORT UNCERTAINTY
+    FIELDS_ section of the script.
   - This path is automatically generated for each time step based on the
     `fold_stat` directory.
-  - Users may change the generation logic and file extension if desired.
-- _NOTE:_ All defined directory and file paths should be configured in the
-  `pivlab_uncertainty.m` script to reflect the user's naming conventions and
-  operating system.
+  - Users may change the naming logic and file extension if desired.
+
+    ```text
+    fold_stat
+    ├── file_stat_001.csv
+    ├── file_stat_002.csv
+    └── etc.
+    ```
 
 ## Uncertainty Calculation
 
