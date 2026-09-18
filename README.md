@@ -42,11 +42,15 @@ manual][man-pivlab] for details.
   - If parallel processing is disabled, all `parfor` loops must be changed to
     standard `for` loops.
 - `ProgressBar.m` - Licensed under the MIT License. Available on
-  [GitHub][gh-prog].
-  - This file defines the `ProgressBar` function used to track the time step
-    loop and should be placed in the same directory as the
+  [GitHub][gh-prog]. _Optional but recommended_.
+  - This file defines the `ProgressBar` and `count` functions used to track the
+    time step loop and should be placed in the same directory as the
     `pivlab_uncertainty.m` script.
   - Works for both single-threaded and multi-threaded execution.
+  - If a progress bar is not desired or this file is not available, comment out
+    all instances of `ProgressBar` and `count` in the script:
+    - In the `nr=1:Nr` loop of the _COMPUTE BACKGROUND IMAGE_ section.
+    - In the `nt=1:Nt` loop of the _COMPUTE UNCERTAINTY_ section.
 
 ### Files
 
