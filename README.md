@@ -10,7 +10,7 @@ Experimental Fluid Mechanics Laboratory
 Department of Mechanical and Aerospace Engineering
 University of Central Florida, Orlando, FL, USA
 Author: Carlos Soto
-Edited: 2026-09-15
+Edited: 2026-09-18
 ```
 
 This script (`pivlab_uncertainty.m`) was created to compute the PIV uncertainty
@@ -51,20 +51,30 @@ manual][man-pivlab] for details.
 ### Files
 
 - Raw image file sequence (`.tif`).
+  - Defined by `fold_img` in the _USER CONFIGURATION_ section of the script.
+  - Script automatically reads all file paths in this directory.
 - Exported velocity field file sequence (`.txt`).
+  - Defined by `fold_vel` in the _USER CONFIGURATION_ section of the script.
+  - Script automatically reads all file paths in this directory.
 - Exported PIVlab settings file (`.mat`).
+  - Defined by `file_stg` in the _USER CONFIGURATION_ section of the script.
   - Alternatively, provide values manually in the script.
 - Exported PIVlab mask file (`.mat`). _Optional but recommended._
-  - If masks are not available, the following must be commented out from the
-    script before execution:
+  - Defined by `file_msk` in the _USER CONFIGURATION_ section of the script.
+  - If masks are not available....
     - In the _USER CONFIGURATION_ section:
-      - The `file_msk` definition that specifies the mask file.
+      - Set `mask_enable = false`.
     - In the _IMPORT SETTINGS AND MASKS_ section:
-      - The `data_msk` definition that loads the masks.
-      - The `masks_all` definition that parses the masks.
-    - In the _UNCERTAINTY COMPUTATION_ section:
-      - The masking code block in Step 4 of the `nr = 1:Nr` loop.
-- _NOTE:_ Top-level directory paths should be configured in the
+      - Comment out `data_msk`, which loads the masks from `file_msk`.
+      - Comment out `masks_all`, which parses the masks from `data_msk`.
+- Output directory, defined by `fold_stat` in the _USER CONFIGURATION_ section
+  of the script.
+- Output file paths, defined by `file_stat` in the _EXPORT UNCERTAINTY FIELDS_
+  section of the script.
+  - This path is automatically generated for each time step based on the
+    `fold_stat` directory.
+  - Users may change the generation logic and file extension if desired.
+- _NOTE:_ All defined directory and file paths should be configured in the
   `pivlab_uncertainty.m` script to reflect the user's naming conventions and
   operating system.
 
