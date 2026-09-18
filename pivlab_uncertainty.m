@@ -6,7 +6,7 @@
 % Department of Mechanical and Aerospace Engineering
 % University of Central Florida, Orlando, FL, USA
 % Author: Carlos Soto
-% Edited: 2026-09-11
+% Edited: 2026-09-18
 % ------------------------------------------------------------------------------
 % See README for documentation.
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,6 +47,8 @@ end
 % USER CONFIGURATION -----------------------------------------------------------
 
 % Define PIV experiment parameters.
+% REQUIRED: (Nr, Nt). Used for computation loops.
+% OPTIONAL: (nc, np, fmt_t). Used for path variables: (fold_, file_)
 nc = 3;   % case to process
 np = 8;   % plane to process
 Nr = 5;   % number of runs
@@ -60,8 +62,9 @@ fprintf("\nDefining user settings for case %d, plane %d...", nc, np);
 % processing. Typical values are between 0.5 px and 1 px.
 err_cal = 0.5; % [px]
 
-% Define if background subtraction was used in preprocessing.
-subbkg_enable = true;
+% Define optional features
+subbkg_enable = true; % background subtraction
+mask_enable = true;   % pixel masking (from PIVLAB .mat file)
 
 % Define input paths.
 script_dir = pwd();
@@ -86,14 +89,16 @@ fprintf(' Done!\n');
 
 fprintf("\nImporting settings and masks...")
 
-% Load PIVlab masks and settings.
+% Load and parse masks
+% OPTIONAL: Comment out if mask_enable == false
 data_msk = load(file_msk);
-data_stg = load(file_stg);
-
-% Parse masks.
 masks_all = data_msk.masks_in_frame;
 
-% Parse calibration settings.
+% Load PIVlab settings.
+% OPTIONAL: Comment out if settings will be defined manually.
+data_stg = load(file_stg);
+
+% Parse calibration settings (REQUIRED).
 % - If x_dir == 2, "x increases towards the left".
 % - If y_dir == 2, "y increases towards the top".
 scale_xy  = data_stg.calxy; % calibration grid scaling factor [m/px]
@@ -104,7 +109,7 @@ N_px      = L_grid / scale_xy; % pixel calibration spacing [px] (Nₚₓ)
 x_dir     = data_stg.x_axis_direction; % x-direction
 y_dir     = data_stg.y_axis_direction; % y-direction
 
-% Parse cross-correlation settings.
+% Parse cross-correlation settings (REQUIRED)
 win_size = round(str2double(data_stg.pass4val)); % final window size [px]
 step_size = round(str2double(data_stg.step4)); % final step size [px]
 img_thresh = str2double(data_stg.minintens); % image intensity threshold
@@ -115,10 +120,12 @@ Nx = floor(((img_x - win_size) / step_size)) + 1; % num x-points
 Ny = floor(((img_y - win_size) / step_size)) + 1; % num y-points
 
 % Parse image preprocessing settings.
+% REQUIRED: `_enable` flags. Set to false to disable image preprocessing.
+% OPTIONAL: `_size` flags. Will not be used if image processing is disabled.
 clahe_enable  = data_stg.clahe_enable;
 highp_enable  = data_stg.enable_highpass;
 wiener_enable = data_stg.wienerwurst;
-% intcap_enable = data_stg.enable_intenscap; % NOT SUPPORTED
+% intcap_enable = data_stg.enable_intenscap; % NOT IMPLEMENTED
 clahe_size    = str2double(data_stg.clahe_size);
 highp_size    = str2double(data_stg.highp_size);
 wiener_size   = str2double(data_stg.wienerwurstsize);
@@ -158,7 +165,7 @@ for nr = 1:Nr
 end
 
 % COMPUTE BACKGROUND IMAGES ----------------------------------------------------
-% - This step is required if PIVlab background subtraction was used when
+% - This step should be performed if PIVlab background subtraction was used when
 %   preprocessing the images.
 % - Computes background image by computing mean intensity, which is the default
 %   in PIVlab.
@@ -316,7 +323,7 @@ parfor nt = 1:Nt
       imgB_prc = imgB_wiener;
     end
 
-    % 2E. Intensity Capping -> NOT SUPPORTED AS IT WAS NOT NEEDED BY THE AUTHOR
+    % 2E. Intensity Capping -> NOT IMPLEMENTED
 
     % Convert to 0-255 double for PIVlab uncertainty functions.
     imgA_prc = imgA_prc .* 255.0
@@ -428,14 +435,16 @@ parfor nt = 1:Nt
       ermsy   = flipud(ermsy);
     end
 
-    % Apply vector filtering mask
-    mask_vtype = (vtype_grid == 2) | (vtype_grid == 0)
-    etotx(mask_vtype)   = NaN;
-    etoty(mask_vtype)   = NaN;
-    ebiasx(mask_vtype)  = NaN;
-    ebiasy(mask_vtype)  = NaN;
-    ermsx(mask_vtype)   = NaN;
-    ermsy(mask_vtype)   = NaN;
+    % Apply vector filtering mask if enabled
+    if mask_enable == 1
+      mask_vtype = (vtype_grid == 2) | (vtype_grid == 0)
+      etotx(mask_vtype)   = NaN;
+      etoty(mask_vtype)   = NaN;
+      ebiasx(mask_vtype)  = NaN;
+      ebiasy(mask_vtype)  = NaN;
+      ermsx(mask_vtype)   = NaN;
+      ermsy(mask_vtype)   = NaN;
+    end
 
     % Convert pixel displacement uncertainties to velocity (σ⃗_disp).
     unc_disp_u_tr = ebiasx * abs(scale_u);
